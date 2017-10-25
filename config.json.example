@@ -1,0 +1,13 @@
+{
+	"token": "BotUserTokenHere",
+	"channels": {
+		"ChannelIdToMonitor": {
+			"reacts": {
+				"👍": ChannelIdForGoodMemes",
+				"👎": ChannelIdForBadMemes"
+			},
+			"whitelist": ["InformationalMessageToKeep"]
+		}
+	},
+	"immediate": false
+}

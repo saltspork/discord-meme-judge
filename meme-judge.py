@@ -23,8 +23,13 @@ async def on_ready():
 			async for log in client.logs_from(client.get_channel(channel), limit=1000):
 				if log.id not in under_deliberation:
 					await evaluate_meme(log)
-		await asyncio.sleep(3600)
+		await asyncio.sleep(600)
 
+def reactstr(reaction):
+	if type(reaction.emoji) is str:
+		return reaction.emoji
+	else:
+		return ':' + reaction.emoji.name + ':'
 
 def dump_meme(message):
 	print('------')
@@ -35,17 +40,10 @@ def dump_meme(message):
 	for attachment in message.attachments:
 		for attr in message.attachments[0]:
 			print(attr + ' ' + str(message.attachments[0][attr]))
-
-	#sorted_reactions = sorted(message.reactions, key=lambda x: x.count, reverse=True)
 	for reaction in message.reactions:
-		if type(reaction.emoji) is str:
-			emojistr = reaction.emoji
-		else:
-			emojistr = ':' + reaction.emoji.name + ':'
-		print('React: ' + emojistr + ' x' + str(reaction.count))
+		print('React: ' + reactstr(reaction) + ' x' + str(reaction.count))
 
 	print('------\n')
-
 
 
 async def evaluate_meme(message):
@@ -54,16 +52,32 @@ async def evaluate_meme(message):
 		print('Active meme deletion acknowledged')
 		return
 	if len(message.attachments) == 0 and 'http' not in message.content.lower():
-		return
+		if 'whitelist' in config['channels'][message.channel.id]:
+			if message.id not in config['channels'][message.channel.id]['whitelist']:
+				await client.delete_message(message)
+				return
 
 	#dump_meme(message)
 
+	sorted_invalid_reactions = []
+
+	for reaction in message.reactions:
+		valid = False
+		for validreaction in config['channels'][message.channel.id]['reacts']:
+			if reactstr(reaction).startswith(validreaction):
+				valid = True
+				break
+		if not valid:
+			sorted_invalid_reactions.append({'emoji': reactstr(reaction), 'count': reaction.count})
+
+	sorted_invalid_reactions = sorted(sorted_invalid_reactions, key=lambda x: x['count'], reverse=True)
+
 	sorted_reactions = []
 
-	for validreaction in config['channels'][message.channel.id]:
+	for validreaction in config['channels'][message.channel.id]['reacts']:
 		count = 0
 		for reaction in message.reactions:
-			if type(reaction.emoji) is str and reaction.emoji.startswith(validreaction):
+			if reactstr(reaction).startswith(validreaction):
 				count += reaction.count
 		sorted_reactions.append({'emoji': validreaction, 'count': count})
 
@@ -71,10 +85,10 @@ async def evaluate_meme(message):
 
 	margin = sorted_reactions[0]['count'] - sorted_reactions[1]['count']
 
-	if((datetime.datetime.utcnow() - message.timestamp) < datetime.timedelta(hours=1)):
+	if((datetime.datetime.utcnow() - message.timestamp) < datetime.timedelta(hours=1)) and not config['immediate']:
 		return True
 
-	if((datetime.datetime.utcnow() - message.timestamp) < datetime.timedelta(days=1)) and margin < 3:
+	if((datetime.datetime.utcnow() - message.timestamp) < datetime.timedelta(days=1)) and margin < 3 and not config['immediate']:
 		return True
 
 	if((datetime.datetime.utcnow() - message.timestamp) < datetime.timedelta(days=2)) and margin < 2:
@@ -83,20 +97,22 @@ async def evaluate_meme(message):
 	if margin < 1:
 		return True
 
-	await sentence_meme(message, sorted_reactions)
+	await sentence_meme(message, sorted_reactions, sorted_invalid_reactions)
 	return
 
-async def sentence_meme(message, sorted_reactions):
-	target = client.get_channel(config['channels'][message.channel.id][sorted_reactions[0]['emoji']])
+async def sentence_meme(message, sorted_reactions, sorted_invalid_reactions):
+	target = client.get_channel(config['channels'][message.channel.id]['reacts'][sorted_reactions[0]['emoji']])
 	memetxt = message.author.mention + '  |  '
 	for reaction in sorted_reactions:
 		if reaction['count'] <= 0:
 			break
 		memetxt += reaction['emoji'] + ' ' + str(reaction['count']) + '  |  '
+	for reaction in sorted_invalid_reactions:
+		memetxt += reaction['emoji'] + ' ' + str(reaction['count']) + '  |  '
 	if message.content:
 		memetxt += '\n' + message.content
 
-	print(config['channels'][message.channel.id][sorted_reactions[0]['emoji']])
+	print(config['channels'][message.channel.id]['reacts'][sorted_reactions[0]['emoji']])
 	print(memetxt)
 
 	if len(message.attachments) > 0:
@@ -130,11 +146,7 @@ async def on_message_delete(message):
 
 @client.event
 async def on_reaction_add(reaction, user):
-	if type(reaction.emoji) is str:
-		emojistr = reaction.emoji
-	else:
-		emojistr = ':' + reaction.emoji.name + ':'
-	print('Global react event: ' + emojistr)
+	print('Global react event: ' + reactstr(reaction))
 	dump_meme(reaction.message)
 
 client.run(config['token'])
