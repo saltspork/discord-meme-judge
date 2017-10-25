@@ -91,8 +91,8 @@ async def evaluate_meme(message):
 	if((datetime.datetime.utcnow() - message.timestamp) < datetime.timedelta(days=1)) and margin < 3 and not config['immediate']:
 		return True
 
-#	if((datetime.datetime.utcnow() - message.timestamp) < datetime.timedelta(days=2)) and margin < 2:
-#		return True
+	if((datetime.datetime.utcnow() - message.timestamp) < datetime.timedelta(days=2)) and margin < 2 and not config['immediate']:
+		return True
 
 	if margin < 1:
 		return True
