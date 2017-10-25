@@ -26,10 +26,10 @@ async def on_ready():
 		await asyncio.sleep(600)
 
 def reactstr(reaction):
-	if type(reaction.emoji) is str:
+	if reaction.custom_emoji:
+		return '<:' + reaction.emoji.name + ':' + reaction.emoji.id + '>'
+	elif type(reaction.emoji) is str:
 		return reaction.emoji
-	else:
-		return ':' + reaction.emoji.name + ':'
 
 def dump_meme(message):
 	print('------')
@@ -91,8 +91,8 @@ async def evaluate_meme(message):
 	if((datetime.datetime.utcnow() - message.timestamp) < datetime.timedelta(days=1)) and margin < 3 and not config['immediate']:
 		return True
 
-	if((datetime.datetime.utcnow() - message.timestamp) < datetime.timedelta(days=2)) and margin < 2:
-		return True
+#	if((datetime.datetime.utcnow() - message.timestamp) < datetime.timedelta(days=2)) and margin < 2:
+#		return True
 
 	if margin < 1:
 		return True
@@ -101,6 +101,10 @@ async def evaluate_meme(message):
 	return
 
 async def sentence_meme(message, sorted_reactions, sorted_invalid_reactions):
+	if config['channels'][message.channel.id]['reacts'][sorted_reactions[0]['emoji']] == 'delete':
+		await client.delete_message(message)
+		return
+
 	target = client.get_channel(config['channels'][message.channel.id]['reacts'][sorted_reactions[0]['emoji']])
 	memetxt = message.author.mention + '  |  '
 	for reaction in sorted_reactions:
