@@ -51,11 +51,14 @@ async def evaluate_meme(message):
 		delet_this.remove(message.id)
 		print('Active meme deletion acknowledged')
 		return
+
+	if 'whitelist' in config['channels'][message.channel.id]:
+		if message.id in config['channels'][message.channel.id]['whitelist']:
+			return
+
 	if len(message.attachments) == 0 and 'http' not in message.content.lower():
-		if 'whitelist' in config['channels'][message.channel.id]:
-			if message.id not in config['channels'][message.channel.id]['whitelist']:
-				await client.delete_message(message)
-				return
+		await client.delete_message(message)
+		return
 
 	#dump_meme(message)
 
