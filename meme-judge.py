@@ -25,11 +25,11 @@ async def on_ready():
 					await evaluate_meme(log)
 		await asyncio.sleep(600)
 
-def reactstr(reaction):
-	if reaction.custom_emoji:
-		return '<:' + reaction.emoji.name + ':' + reaction.emoji.id + '>'
-	elif type(reaction.emoji) is str:
-		return reaction.emoji
+def lookup_emoji(prefix, server):
+	for emoji in server.emojis:
+		if str(emoji).startswith(prefix):
+			return emoji
+	return False
 
 def dump_meme(message):
 	print('------')
@@ -41,7 +41,7 @@ def dump_meme(message):
 		for attr in message.attachments[0]:
 			print(attr + ' ' + str(message.attachments[0][attr]))
 	for reaction in message.reactions:
-		print('React: ' + reactstr(reaction) + ' x' + str(reaction.count))
+		print('React: ' + str(reaction.emoji) + ' x' + str(reaction.count))
 
 	print('------\n')
 
@@ -66,16 +66,27 @@ async def evaluate_meme(message):
 		await client.delete_message(message)
 		return
 
-	users = {}
+	users = {client.user.id:[]}
 	valid_mess = []
 	invalid_mess = []
 
 	for reaction in message.reactions:
 		for user in await client.get_reaction_users(reaction):
-			if user in users:
-				users[user].append(reactstr(reaction))
+			if user.id in users:
+				users[user.id].append(str(reaction.emoji))
 			else:
-				users[user] = [reactstr(reaction)]
+				users[user.id] = [str(reaction.emoji)]
+
+
+	for reaction in config['channels'][message.channel.id]['reacts']:
+		if reaction not in users[client.user.id]:
+			reactwith = reaction
+			if reactwith.startswith('<:'):
+				reactwith = lookup_emoji(reaction, message.server)
+			if reactwith != False:
+				await client.add_reaction(message, reactwith)
+
+	del users[client.user.id]
 
 	for user in users:
 		valid_counted = []
@@ -125,7 +136,10 @@ async def sentence_meme(message, reacts):
 	target = client.get_channel(config['channels'][message.channel.id]['reacts'][reacts[0][0]])
 	memetxt = message.author.mention + '  |  '
 	for reaction in reacts:
-		memetxt += reaction[0] + ' ' + str(reaction[1]) + '  |  '
+		reactwith = reaction[0]
+		if reactwith.startswith('<:') and not reactwith.endswith('>'):
+			reactwith = str(lookup_emoji(reaction, message.server))
+		memetxt += reactwith + ' ' + str(reaction[1]) + '  |  '
 	if message.content:
 		memetxt += '\n' + message.content
 
@@ -163,7 +177,7 @@ async def on_message_delete(message):
 
 @client.event
 async def on_reaction_add(reaction, user):
-	print('Global react event: ' + reactstr(reaction))
+	print('Global react event: ' + str(reaction.emoji))
 	dump_meme(reaction.message)
 
 client.run(config['token'])
