@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-import discord, asyncio, datetime, requests, io, json
+import discord, asyncio, datetime, requests, io, json, collections
 
 with open('config.json') as f:
 	config = json.load(f)
@@ -46,6 +46,12 @@ def dump_meme(message):
 	print('------\n')
 
 
+def matchreact(react, valids):
+	for valid in valids:
+		if react.startswith(valid):
+				return True, valid
+	return False, react
+
 async def evaluate_meme(message):
 	if message.id in delet_this:
 		delet_this.remove(message.id)
@@ -60,33 +66,41 @@ async def evaluate_meme(message):
 		await client.delete_message(message)
 		return
 
-	#dump_meme(message)
-
-	sorted_invalid_reactions = []
+	users = {}
+	valid_mess = []
+	invalid_mess = []
 
 	for reaction in message.reactions:
-		valid = False
-		for validreaction in config['channels'][message.channel.id]['reacts']:
-			if reactstr(reaction).startswith(validreaction):
-				valid = True
-				break
-		if not valid:
-			sorted_invalid_reactions.append({'emoji': reactstr(reaction), 'count': reaction.count})
+		for user in await client.get_reaction_users(reaction):
+			if user in users:
+				users[user].append(reactstr(reaction))
+			else:
+				users[user] = [reactstr(reaction)]
 
-	sorted_invalid_reactions = sorted(sorted_invalid_reactions, key=lambda x: x['count'], reverse=True)
+	for user in users:
+		valid_counted = []
+		invalid_counted = []
 
-	sorted_reactions = []
+		for react in users[user]:
+			valid, subreact = matchreact(react, config['channels'][message.channel.id]['reacts'])
+			if not valid:
+				invalid_counted.append(subreact)
+			elif subreact not in valid_counted:
+				valid_counted.append(subreact)
 
-	for validreaction in config['channels'][message.channel.id]['reacts']:
-		count = 0
-		for reaction in message.reactions:
-			if reactstr(reaction).startswith(validreaction):
-				count += reaction.count
-		sorted_reactions.append({'emoji': validreaction, 'count': count})
+		valid_mess += valid_counted
+		invalid_mess += invalid_counted
 
-	sorted_reactions = sorted(sorted_reactions, key=lambda x: x['count'], reverse=True)
+	valid_grouped = collections.Counter(valid_mess).most_common()
+	invalid_grouped = collections.Counter(invalid_mess).most_common()
 
-	margin = sorted_reactions[0]['count'] - sorted_reactions[1]['count']
+	if len(valid_grouped) < 1:
+		return True
+	elif len(valid_grouped) == 1:
+		margin = valid_grouped[0][1]
+	else:
+		margin = valid_grouped[0][1] - valid_grouped[1][1]
+	
 
 	if((datetime.datetime.utcnow() - message.timestamp) < datetime.timedelta(hours=1)) and not config['immediate']:
 		return True
@@ -100,26 +114,22 @@ async def evaluate_meme(message):
 	if margin < 1:
 		return True
 
-	await sentence_meme(message, sorted_reactions, sorted_invalid_reactions)
+	await sentence_meme(message, valid_grouped + invalid_grouped)
 	return
 
-async def sentence_meme(message, sorted_reactions, sorted_invalid_reactions):
-	if config['channels'][message.channel.id]['reacts'][sorted_reactions[0]['emoji']] == 'delete':
+async def sentence_meme(message, reacts):
+	if config['channels'][message.channel.id]['reacts'][reacts[0][0]] == 'delete':
 		await client.delete_message(message)
 		return
 
-	target = client.get_channel(config['channels'][message.channel.id]['reacts'][sorted_reactions[0]['emoji']])
+	target = client.get_channel(config['channels'][message.channel.id]['reacts'][reacts[0][0]])
 	memetxt = message.author.mention + '  |  '
-	for reaction in sorted_reactions:
-		if reaction['count'] <= 0:
-			break
-		memetxt += reaction['emoji'] + ' ' + str(reaction['count']) + '  |  '
-	for reaction in sorted_invalid_reactions:
-		memetxt += reaction['emoji'] + ' ' + str(reaction['count']) + '  |  '
+	for reaction in reacts:
+		memetxt += reaction[0] + ' ' + str(reaction[1]) + '  |  '
 	if message.content:
 		memetxt += '\n' + message.content
 
-	print(config['channels'][message.channel.id]['reacts'][sorted_reactions[0]['emoji']])
+	print(config['channels'][message.channel.id]['reacts'][reacts[0][0]])
 	print(memetxt)
 
 	if len(message.attachments) > 0:
