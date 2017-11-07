@@ -3,7 +3,7 @@
 import discord, asyncio, datetime, requests, io, json, collections
 
 with open('config.json') as f:
-	config = json.load(f)
+	config = json.load(f, object_pairs_hook=collections.OrderedDict)
 
 under_deliberation = []
 delet_this = []
