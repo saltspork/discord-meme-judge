@@ -134,7 +134,7 @@ async def sentence_meme(message, reacts):
 	for reaction in reacts:
 		reactwith = reaction[0]
 		if reactwith.startswith('<:') and not reactwith.endswith('>'):
-			reactwith = str(lookup_emoji(reaction, message.server))
+			reactwith = str(lookup_emoji(reactwith, message.server))
 		memetxt += reactwith + ' ' + str(reaction[1]) + '  |  '
 	if message.content:
 		memetxt += '\n' + message.content
