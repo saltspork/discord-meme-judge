@@ -5,8 +5,10 @@
 			"reacts": {
 				"👍": ChannelIdForGoodMemes",
 				"👎": ChannelIdForBadMemes"
+				"<:custom:": "delete"
 			},
-			"whitelist": ["InformationalMessageToKeep"]
+			"whitelist": ["InformationalMessageIDToKeep"],
+			"target": SecondsAfterOnly1VoteNeeded
 		}
 	},
 	"immediate": false

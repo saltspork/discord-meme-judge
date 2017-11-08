@@ -116,10 +116,9 @@ async def evaluate_meme(message):
 		return True
 
 	# after target seconds, only a margin of 1 is required
-	target = 3600 * 48
 	elapsed = (datetime.datetime.utcnow() - message.timestamp).total_seconds()
 
-	if margin < math.ceil(1-math.log(elapsed/target, 2)) and not config['immediate']:
+	if margin < math.ceil(1-math.log(elapsed/config['channels'][message.channel.id]['target'], 2)) and not config['immediate']:
 		return True
 
 	await sentence_meme(message, valid_grouped + invalid_grouped)
