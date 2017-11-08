@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-import discord, asyncio, datetime, requests, io, json, collections
+import discord, asyncio, datetime, requests, io, json, collections, math
 
 with open('config.json') as f:
 	config = json.load(f, object_pairs_hook=collections.OrderedDict)
@@ -112,17 +112,14 @@ async def evaluate_meme(message):
 	else:
 		margin = valid_grouped[0][1] - valid_grouped[1][1]
 	
-
-	if((datetime.datetime.utcnow() - message.timestamp) < datetime.timedelta(hours=1)) and not config['immediate']:
-		return True
-
-	if((datetime.datetime.utcnow() - message.timestamp) < datetime.timedelta(days=1)) and margin < 3 and not config['immediate']:
-		return True
-
-	if((datetime.datetime.utcnow() - message.timestamp) < datetime.timedelta(days=2)) and margin < 2 and not config['immediate']:
-		return True
-
 	if margin < 1:
+		return True
+
+	# after target seconds, only a margin of 1 is required
+	target = 3600 * 48
+	elapsed = (datetime.datetime.utcnow() - message.timestamp).total_seconds()
+
+	if margin < math.ceil(1-math.log(elapsed/target, 2)) and not config['immediate']:
 		return True
 
 	await sentence_meme(message, valid_grouped + invalid_grouped)
