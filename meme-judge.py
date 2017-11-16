@@ -157,7 +157,7 @@ async def on_message(message):
 	if message.channel.id in config['channels'] and message.id not in under_deliberation:
 		under_deliberation.append(message.id)
 		while await evaluate_meme(message):
-			print('Meme active')
+			#print('Meme active')
 			await client.wait_for_reaction(None, message=message, timeout=300)
 		under_deliberation.remove(message.id)
 		print('Meme becoming inactive')
