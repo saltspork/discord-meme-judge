@@ -22,11 +22,13 @@ async def on_ready():
 	print('Invite: ' + discord.utils.oauth_url(client.user.id))
 	print('------\n')
 
-	while True:
+async def refresh_memes():
+	await client.wait_until_ready()
+	while not client.is_closed:
 		for channel in config['channels']:
-			async for log in client.logs_from(client.get_channel(channel)):
-				if log.id not in under_deliberation:
-					await evaluate_meme(log)
+			async for logmsg in client.logs_from(client.get_channel(channel)):
+				if logmsg.id not in under_deliberation:
+					await evaluate_meme(logmsg)
 		await asyncio.sleep(config['refresh_interval'])
 
 def lookup_emoji(prefix, server):
@@ -188,4 +190,5 @@ async def on_reaction_add(reaction, user):
 	print('Global react event: ' + str(reaction.emoji))
 	dump_meme(reaction.message)
 
+client.loop.create_task(refresh_memes())
 client.run(config['token'])
