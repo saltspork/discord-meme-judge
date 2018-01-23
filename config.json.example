@@ -11,5 +11,6 @@
 			"target": SecondsAfterOnly1VoteNeeded
 		}
 	},
-	"immediate": false
+	"immediate": false,
+	"refresh_interval": SecondsToScrapBacklog
 }

@@ -24,10 +24,10 @@ async def on_ready():
 
 	while True:
 		for channel in config['channels']:
-			async for log in client.logs_from(client.get_channel(channel), limit=1000):
+			async for log in client.logs_from(client.get_channel(channel)):
 				if log.id not in under_deliberation:
 					await evaluate_meme(log)
-		await asyncio.sleep(600)
+		await asyncio.sleep(config['refresh_interval'])
 
 def lookup_emoji(prefix, server):
 	for emoji in server.emojis:
@@ -164,7 +164,7 @@ async def on_message(message):
 	elif message.channel.id in config['channels'] and message.id not in under_deliberation:
 		under_deliberation.append(message.id)
 		while await evaluate_meme(message):
-			await client.wait_for_reaction(None, message=message, timeout=300)
+			await client.wait_for_reaction(None, message=message, timeout=config['refresh_interval'])
 		under_deliberation.remove(message.id)
 		print('Meme becoming inactive')
 	elif message.channel.id in nospam:
@@ -189,4 +189,3 @@ async def on_reaction_add(reaction, user):
 	dump_meme(reaction.message)
 
 client.run(config['token'])
-
