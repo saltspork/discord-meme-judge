@@ -164,18 +164,16 @@ async def on_message(message):
 	elif message.channel.id in config['channels'] and message.id not in under_deliberation:
 		under_deliberation.append(message.id)
 		while await evaluate_meme(message):
-			#print('Meme active')
 			await client.wait_for_reaction(None, message=message, timeout=300)
 		under_deliberation.remove(message.id)
 		print('Meme becoming inactive')
-	elif message.content.startswith("<@"+client.user.id+"> "):
-		tokens=message.content.split(' ', 2)
-		editme = await client.get_message(message.channel, tokens[1])
-		if editme.author.id == client.user.id:
-			await client.edit_message(editme, editme.content + '\n' + tokens[2])
-			await client.delete_message(message)
 	elif message.channel.id in nospam:
-			await client.delete_message(message)
+		if message.content.startswith("<@"+client.user.id+"> "):
+			tokens=message.content.split(' ', 2)
+			editme = await client.get_message(message.channel, tokens[1])
+			if editme.author.id == client.user.id:
+				await client.edit_message(editme, editme.content + '\n' + tokens[2])
+		await client.delete_message(message)
 
 
 @client.event
