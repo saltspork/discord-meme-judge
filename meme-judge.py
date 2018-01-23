@@ -115,7 +115,7 @@ async def evaluate_meme(message):
 		margin = valid_grouped[0][1]
 	else:
 		margin = valid_grouped[0][1] - valid_grouped[1][1]
-	
+
 	if margin < 1:
 		return True
 
@@ -158,7 +158,10 @@ async def sentence_meme(message, reacts):
 
 @client.event
 async def on_message(message):
-	if message.channel.id in config['channels'] and message.id not in under_deliberation:
+	dump_meme(message)
+	if message.author.id == client.user.id:
+		return
+	elif message.channel.id in config['channels'] and message.id not in under_deliberation:
 		under_deliberation.append(message.id)
 		while await evaluate_meme(message):
 			#print('Meme active')
@@ -173,7 +176,6 @@ async def on_message(message):
 			await client.delete_message(message)
 	elif message.channel.id in nospam:
 			await client.delete_message(message)
-	dump_meme(message)
 
 
 @client.event
