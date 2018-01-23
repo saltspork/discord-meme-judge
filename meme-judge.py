@@ -127,13 +127,14 @@ async def evaluate_meme(message):
 	if margin < math.ceil(1-math.log(elapsed/config['channels'][message.channel.id]['target'], 2)) and not config['immediate']:
 		return True
 
-	await sentence_meme(message, valid_grouped + invalid_grouped)
-	return
+	return await sentence_meme(message, valid_grouped + invalid_grouped)
 
 async def sentence_meme(message, reacts):
 	if config['channels'][message.channel.id]['reacts'][reacts[0][0]] == 'delete':
 		await client.delete_message(message)
 		return
+	elif config['channels'][message.channel.id]['reacts'][reacts[0][0]] == 'ignore':
+		return True
 
 	target = client.get_channel(config['channels'][message.channel.id]['reacts'][reacts[0][0]])
 	memetxt = message.author.mention + '  |  '
