@@ -172,7 +172,7 @@ async def on_message(message):
 			tokens=message.content.split(' ', 2)
 			editme = await client.get_message(message.channel, tokens[1])
 			if editme.author.id == client.user.id:
-				await client.edit_message(editme, editme.content + '\n' + tokens[2])
+				await client.edit_message(editme, editme.content + '\n' + tokens[2] + ' (' + message.author.mention + ')')
 		await client.delete_message(message)
 
 
