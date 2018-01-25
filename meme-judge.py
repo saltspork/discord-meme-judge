@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-import discord, asyncio, datetime, requests, io, json, collections, math
+import discord, asyncio, aiohttp, datetime, requests, io, json, collections, math
 
 with open('config.json') as f:
 	config = json.load(f, object_pairs_hook=collections.OrderedDict)
@@ -129,6 +129,8 @@ async def evaluate_meme(message):
 
 	return await sentence_meme(message, valid_grouped + invalid_grouped)
 
+
+
 async def sentence_meme(message, reacts):
 	if config['channels'][message.channel.id]['reacts'][reacts[0][0]] == 'delete':
 		await client.delete_message(message)
@@ -151,13 +153,18 @@ async def sentence_meme(message, reacts):
 
 	if len(message.attachments) > 0:
 		print(message.attachments[0]['url'])
-		r = requests.get(message.attachments[0]['url'])
-		attachment = io.BytesIO(r.content)
+		async with aiohttp.ClientSession() as session:
+			attachment = await fetch(session, message.attachments[0]['url'])
 		await client.send_file(target, attachment, filename=message.attachments[0]['filename'] ,content=memetxt)
 	else:
 		await client.send_message(target, memetxt)
 
 	await client.delete_message(message)
+
+async def fetch(session, url):
+	with async_timeout.timeout(30):
+		async with session.get(url) as response:
+			return await response.text()
 
 @client.event
 async def on_message(message):
