@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-import discord, asyncio, async_timeout, aiohttp, datetime, requests, io, json, collections, math
+import discord, asyncio, aiohttp, datetime, io, json, collections, math
 
 with open('config.json') as f:
 	config = json.load(f, object_pairs_hook=collections.OrderedDict)
