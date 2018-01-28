@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-import discord, asyncio, aiohttp, datetime, io, json, collections, math
+import discord, asyncio, aiohttp, datetime, io, json, collections, math, datetime
 
 with open('config.json') as f:
 	config = json.load(f, object_pairs_hook=collections.OrderedDict)
@@ -9,8 +9,7 @@ nospam = []
 for channel in config['channels']:
 	nospam.extend(list(config['channels'][channel]['reacts'].values()))
 
-under_deliberation = []
-delet_this = []
+processing = []
 
 client = discord.Client()
 
@@ -22,13 +21,20 @@ async def on_ready():
 	print('Invite: ' + discord.utils.oauth_url(client.user.id))
 	print('------\n')
 
+@client.event
+async def on_message(message):
+	await evaluate_meme(message)
+
+@client.event
+async def on_reaction_add(reaction, user):
+	await evaluate_meme(reaction.message)
+
 async def refresh_memes():
 	await client.wait_until_ready()
 	while not client.is_closed:
 		for channel in config['channels']:
 			async for logmsg in client.logs_from(client.get_channel(channel)):
-				if logmsg.id not in under_deliberation:
-					await evaluate_meme(logmsg)
+				await evaluate_meme(logmsg)
 		await asyncio.sleep(config['refresh_interval'])
 
 def lookup_emoji(prefix, server):
@@ -37,31 +43,41 @@ def lookup_emoji(prefix, server):
 			return emoji
 	return False
 
-def dump_meme(message):
-	print('------')
-	print('Age: ' + str(datetime.datetime.utcnow() - message.timestamp))
-	print('Content: ' + message.content)
-	print('CID: ' + message.channel.id)
-	print('SID: ' + message.channel.server.id)
-	for attachment in message.attachments:
-		for attr in message.attachments[0]:
-			print(attr + ' ' + str(message.attachments[0][attr]))
-	for reaction in message.reactions:
-		print('React: ' + str(reaction.emoji) + ' x' + str(reaction.count))
-
-	print('------\n')
-
-
 def matchreact(react, valids):
 	for valid in valids:
 		if react.startswith(valid):
 				return True, valid
 	return False, react
 
+# lazy wrapper to avoid races
 async def evaluate_meme(message):
-	if message.id in delet_this:
-		delet_this.remove(message.id)
-		print('Active meme deletion acknowledged')
+	if message.id in processing:
+		logtime(message.id+' race averted')
+		return
+	else:
+		processing.append(message.id)
+		logtime(message.id+' evaluation starting')
+		await unsafe_evaluate_meme(message)
+		logtime(message.id+' evaluation finished')
+		processing.remove(message.id)
+
+async def unsafe_evaluate_meme(message):
+	if message.author.id == client.user.id:
+		return
+	
+	if message.channel.id in nospam:
+		logtime(message.id+' editing possible')
+		if message.content.startswith("<@"+client.user.id+"> "):
+			tokens=message.content.split(' ', 2)
+			editme = await client.get_message(message.channel, tokens[1])
+			if editme.author.id == client.user.id:
+				await client.edit_message(editme, editme.content + '\n' + tokens[2] + ' (' + message.author.mention + ')')
+				logtime(message.id+' editing edited')
+		await client.delete_message(message)
+		logtime(message.id+' editing deleted')
+		return
+	
+	if message.channel.id not in config['channels']:
 		return
 
 	if 'whitelist' in config['channels'][message.channel.id]:
@@ -69,12 +85,16 @@ async def evaluate_meme(message):
 			return
 
 	if len(message.attachments) == 0 and 'http' not in message.content.lower():
+		logtime(message.id+' invalid deleting')
 		await client.delete_message(message)
+		logtime(message.id+' invalid deleted')
 		return
 
 	users = {client.user.id:[]}
 	valid_mess = []
 	invalid_mess = []
+
+	logtime(message.id+' valid enumerating')
 
 	for reaction in message.reactions:
 		for user in await client.get_reaction_users(reaction):
@@ -83,14 +103,18 @@ async def evaluate_meme(message):
 			else:
 				users[user.id] = [str(reaction.emoji)]
 
+	logtime(message.id+' valid enumerated')
 
 	for reaction in config['channels'][message.channel.id]['reacts']:
-		if reaction not in users[client.user.id]:
+		if reaction.startswith('<:'):
+			reactwith = lookup_emoji(reaction, message.server)
+		else:
 			reactwith = reaction
-			if reactwith.startswith('<:'):
-				reactwith = lookup_emoji(reaction, message.server)
-			if reactwith != False:
+		if str(reactwith) not in users[client.user.id] and reactwith != False:
+				print(', '.join(users[client.user.id]))
+				logtime(message.id+' valid placeholding '+str(reactwith))
 				await client.add_reaction(message, reactwith)
+				logtime(message.id+' valid placeholded '+str(reactwith))
 
 	del users[client.user.id]
 
@@ -130,10 +154,11 @@ async def evaluate_meme(message):
 	return await sentence_meme(message, valid_grouped + invalid_grouped)
 
 
-
 async def sentence_meme(message, reacts):
+	logtime(message.id+' valid voted')
 	if config['channels'][message.channel.id]['reacts'][reacts[0][0]] == 'delete':
 		await client.delete_message(message)
+		logtime(message.id+' valid deleted')
 		return
 	elif config['channels'][message.channel.id]['reacts'][reacts[0][0]] == 'ignore':
 		return True
@@ -148,51 +173,26 @@ async def sentence_meme(message, reacts):
 	if message.content:
 		memetxt += '\n' + message.content
 
-	print(config['channels'][message.channel.id]['reacts'][reacts[0][0]])
-	print(memetxt)
-
 	if len(message.attachments) > 0:
-		print(message.attachments[0]['url'])
+		logtime(message.id+' valid attachment downloading')
 		async with aiohttp.ClientSession() as session:
 			async with session.get(message.attachments[0]['url']) as response:
-				attachment = io.BytesIO(await response.read())
+				attached_bytes = await response.read()
+				attachment = io.BytesIO(attached_bytes)
+		logtime(message.id+' valid attachment uploading')
 		await client.send_file(target, attachment, filename=message.attachments[0]['filename'] ,content=memetxt)
+		logtime(message.id+' valid attachment uploaded')
 	else:
+		logtime(message.id+' valid textonly posting')
 		await client.send_message(target, memetxt)
+		logtime(message.id+' valid textonly posted')
 
 	await client.delete_message(message)
+	logtime(message.id+' valid original deleted')
 
-@client.event
-async def on_message(message):
-	dump_meme(message)
-	if message.author.id == client.user.id:
-		return
-	elif message.channel.id in config['channels'] and message.id not in under_deliberation:
-		under_deliberation.append(message.id)
-		while not client.is_closed and message in client.messages and await evaluate_meme(message):
-			await client.wait_for_reaction(None, message=message, timeout=config['refresh_interval'])
-		under_deliberation.remove(message.id)
-		print('Meme becoming inactive')
-	elif message.channel.id in nospam:
-		if message.content.startswith("<@"+client.user.id+"> "):
-			tokens=message.content.split(' ', 2)
-			editme = await client.get_message(message.channel, tokens[1])
-			if editme.author.id == client.user.id:
-				await client.edit_message(editme, editme.content + '\n' + tokens[2] + ' (' + message.author.mention + ')')
-		await client.delete_message(message)
+def logtime(message):
+	print(str(datetime.datetime.now())+' '+message)
 
-
-@client.event
-async def on_message_delete(message):
-	if message.id in under_deliberation:
-		delet_this.append(message.id)
-		print('Active meme deleted')
-		dump_meme(message)
-
-@client.event
-async def on_reaction_add(reaction, user):
-	print('Global react event: ' + str(reaction.emoji))
-	dump_meme(reaction.message)
 
 client.loop.create_task(refresh_memes())
 client.run(config['token'])
