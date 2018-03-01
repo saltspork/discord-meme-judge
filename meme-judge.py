@@ -46,7 +46,10 @@ def lookup_emoji(prefix, server):
 def matchreact(react, valids):
 	for valid in valids:
 		if react.startswith(valid):
-				return True, valid
+				if valids[valid] == 'suggest':
+					return False, valid
+				else:
+					return True, valid
 	return False, react
 
 # lazy wrapper to avoid races
@@ -160,7 +163,7 @@ async def sentence_meme(message, reacts):
 		await client.delete_message(message)
 		logtime(message.id+' valid deleted')
 		return
-	elif config['channels'][message.channel.id]['reacts'][reacts[0][0]] == 'ignore':
+	elif config['channels'][message.channel.id]['reacts'][reacts[0][0]] == 'stalemate':
 		return True
 
 	target = client.get_channel(config['channels'][message.channel.id]['reacts'][reacts[0][0]])
