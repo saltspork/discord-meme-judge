@@ -148,6 +148,9 @@ async def unsafe_evaluate_meme(message):
 	if margin < 1:
 		return True
 
+	if config['channels'][message.channel.id]['reacts'][valid_grouped[0][0]] == 'delete' and margin < 2:
+		return True
+
 	# after target seconds, only a margin of 1 is required
 	elapsed = (datetime.datetime.utcnow() - message.timestamp).total_seconds()
 
