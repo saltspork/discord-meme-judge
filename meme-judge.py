@@ -32,10 +32,13 @@ async def on_reaction_add(reaction, user):
 async def refresh_memes():
 	await client.wait_until_ready()
 	while not client.is_closed:
+		logtime('global refresh starting')
 		for channel in config['channels']:
 			async for logmsg in client.logs_from(client.get_channel(channel)):
 				await evaluate_meme(logmsg)
+		logtime('global refresh finished, sleeping for '+str(config['refresh_interval']))
 		await asyncio.sleep(config['refresh_interval'])
+	logtime('global refresh loop exited, this is probably bad')
 
 def lookup_emoji(prefix, server):
 	for emoji in server.emojis:
