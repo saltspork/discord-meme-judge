@@ -111,13 +111,17 @@ async def unsafe_evaluate_meme(message):
 
 	logtime(message.id+' valid enumerated')
 
+	if len(message.attachments) >= 0 and message.attachments[0]['size'] >= config['max_size'] and str(config['alert']) not in users[client.user.id]:
+		logtime(message.id+' oversize placeholding')
+		await client.add_reaction(message, config['alert'])
+		logtime(message.id+' oversize placeholded')
+
 	for reaction in config['channels'][message.channel.id]['reacts']:
 		if reaction.startswith('<:'):
 			reactwith = lookup_emoji(reaction, message.server)
 		else:
 			reactwith = reaction
 		if str(reactwith) not in users[client.user.id] and reactwith != False:
-				print(', '.join(users[client.user.id]))
 				logtime(message.id+' valid placeholding '+str(reactwith))
 				await client.add_reaction(message, reactwith)
 				logtime(message.id+' valid placeholded '+str(reactwith))

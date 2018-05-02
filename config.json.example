@@ -12,5 +12,7 @@
 		}
 	},
 	"immediate": false,
-	"refresh_interval": SecondsToScrapBacklog
+	"refresh_interval": SecondsToScrapBacklog,
+	"max_size": 8000000,
+	"alert": "⚠"
 }
