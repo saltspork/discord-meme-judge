@@ -115,6 +115,7 @@ async def unsafe_evaluate_meme(message):
 		logtime(message.id+' oversize placeholding')
 		await client.add_reaction(message, config['alert'])
 		logtime(message.id+' oversize placeholded')
+		return
 
 	for reaction in config['channels'][message.channel.id]['reacts']:
 		if reaction.startswith('<:'):
