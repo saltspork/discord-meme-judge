@@ -111,7 +111,7 @@ async def unsafe_evaluate_meme(message):
 
 	logtime(message.id+' valid enumerated')
 
-	if len(message.attachments) >= 0 and message.attachments[0]['size'] >= config['max_size']:
+	if len(message.attachments) > 0 and message.attachments[0]['size'] >= config['max_size']:
 		if str(config['alert']) not in users[client.user.id]:
 			logtime(message.id+' oversize placeholding')
 			await client.add_reaction(message, config['alert'])
