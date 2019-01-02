@@ -132,6 +132,7 @@ async def unsafe_evaluate_meme(message):
 		warntxt = message.author.mention + ' your meme ' + message.attachments[0].filename + ' is larger than ' + str(config['max_size']/1000) + ' KB.\nPlease compress it more until bots get Nitro.'
 		await client.get_channel(config['channels'][str(message.channel.id)]['infochan']).send(warntxt)
 		await message.delete()
+		return
 
 	for reaction in config['channels'][str(message.channel.id)]['reacts']:
 		if reaction.startswith('<:'):
