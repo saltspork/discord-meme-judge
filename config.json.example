@@ -3,11 +3,12 @@
 	"channels": {
 		"ChannelIdToMonitor": {
 			"reacts": {
-				"👍": ChannelIdForGoodMemes",
-				"👎": ChannelIdForBadMemes"
+				"👍": ChannelIdForGoodMemes,
+				"👎": ChannelIdForBadMemes,
 				"<:custom:": "delete"
 			},
-			"whitelist": ["InformationalMessageIDToKeep"],
+			"infochan": ChannelIDForAlerts
+			"whitelist": [InformationalMessageIDToKeep],
 			"target": SecondsAfterOnly1VoteNeeded
 		}
 	},
