@@ -1,11 +1,16 @@
-This is for my own reference, probably not that understandable sorry
-
+```
+# create a venv
 python3 -m venv venvdir
 
-source venvdir/bin/activate.fish
+# use the venv
+source venvdir/bin/activate
+# Weird Fishes/Arpeggi
+#source venvdir/bin/activate.fish
 
+# install deps
 pip3 install wheel
-pip3 install -U https://github.com/Rapptz/discord.py/archive/rewrite.zip#egg=discord.py
 pip3 install -r requirements.txt
 
+# run the meme judge
 ./meme-judge.py
+```
